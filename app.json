@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "OfflineBrain",
+    "slug": "offlinebrain",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "offlinebrain",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0D0B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vaidotassackus.offlinebrain"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D0B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-font"
+    ]
+  }
+}
