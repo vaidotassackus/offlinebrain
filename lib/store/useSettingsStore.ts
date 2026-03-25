@@ -1,19 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { storage } from '../utils/storage';
-
-const mmkvStorage = {
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    storage.set(name, value);
-  },
-  removeItem: (name: string) => {
-    storage.remove(name);
-  },
-};
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SettingsState {
   hasSeeded: boolean;
@@ -28,7 +15,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'offlinebrain-settings',
-      storage: createJSONStorage(() => mmkvStorage),
+      storage: createJSONStorage(() => AsyncStorage),
     }
   )
 );
