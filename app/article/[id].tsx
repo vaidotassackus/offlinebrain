@@ -18,6 +18,7 @@ import {
   recordArticleView,
   type ArticleRow,
 } from '../../lib/db/articles';
+import { useBookmarkStore } from '../../lib/store/useBookmarkStore';
 
 interface Section {
   title: string;
@@ -47,6 +48,11 @@ export default function ArticleScreen() {
   const db = useSQLiteContext();
   const [article, setArticle] = useState<(ArticleRow & { pack_name: string }) | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
+  const { isBookmarked, toggle: toggleBookmark, loadBookmarks } = useBookmarkStore();
+
+  useEffect(() => {
+    loadBookmarks(db);
+  }, [db]);
 
   useEffect(() => {
     if (!id) return;
@@ -79,7 +85,17 @@ export default function ArticleScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={22} color={colors.white} />
           </TouchableOpacity>
-          <Text style={styles.breadcrumb}>{article.pack_name}</Text>
+          <Text style={[styles.breadcrumb, { flex: 1 }]}>{article.pack_name}</Text>
+          <TouchableOpacity
+            onPress={() => toggleBookmark(db, article.id)}
+            style={styles.bookmarkButton}
+          >
+            <Ionicons
+              name={isBookmarked(article.id) ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color={isBookmarked(article.id) ? colors.brand : colors.ink20}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Title */}
@@ -172,6 +188,9 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: spacing.sm,
+    padding: spacing.xs,
+  },
+  bookmarkButton: {
     padding: spacing.xs,
   },
   breadcrumb: {

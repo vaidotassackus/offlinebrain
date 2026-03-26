@@ -13,6 +13,7 @@ import { useFocusEffect } from 'expo-router';
 import { ArticleRow } from '../../components/ArticleRow';
 import { colors, fonts, spacing, radius } from '../../constants/theme';
 import { getRecentArticles, type ArticleRow as ArticleRowType } from '../../lib/db/articles';
+import { getBookmarks, type BookmarkRow } from '../../lib/db/bookmarks';
 import { seedDatabase } from '../../lib/seed';
 import { useSettingsStore } from '../../lib/store/useSettingsStore';
 
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const [recentArticles, setRecentArticles] = useState<
     (ArticleRowType & { pack_name: string; viewed_at: number })[]
   >([]);
+  const [bookmarks, setBookmarks] = useState<BookmarkRow[]>([]);
   const hasSeeded = useSettingsStore((s) => s.hasSeeded);
   const setHasSeeded = useSettingsStore((s) => s.setHasSeeded);
   const [seeding, setSeeding] = useState(false);
@@ -48,6 +50,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       getRecentArticles(db).then(setRecentArticles);
+      getBookmarks(db, 5).then(setBookmarks);
     }, [db])
   );
 
@@ -121,6 +124,23 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Saved articles (bookmarks) */}
+        {bookmarks.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Saved Articles</Text>
+            {bookmarks.map((article) => (
+              <ArticleRow
+                key={article.id}
+                title={article.title}
+                packName={article.pack_name}
+                readTime={article.read_time}
+                isCritical={article.is_critical === 1}
+                onPress={() => router.push(`/article/${article.id}`)}
+              />
+            ))}
+          </>
+        )}
 
         {/* Recently viewed */}
         {recentArticles.length > 0 && (
