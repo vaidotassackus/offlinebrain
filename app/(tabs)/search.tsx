@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -22,18 +22,22 @@ export default function SearchScreen() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>('keyword');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearch = useCallback(
-    async (text: string) => {
+    (text: string) => {
       setQuery(text);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       if (text.trim().length === 0) {
         setResults([]);
         setHasSearched(false);
         return;
       }
-      setHasSearched(true);
-      const found = await searchArticles(db, text);
-      setResults(found);
+      debounceRef.current = setTimeout(async () => {
+        setHasSearched(true);
+        const found = await searchArticles(db, text);
+        setResults(found);
+      }, 300);
     },
     [db]
   );
