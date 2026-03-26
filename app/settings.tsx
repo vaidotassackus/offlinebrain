@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -91,7 +90,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -121,7 +120,7 @@ export default function SettingsScreen() {
           <SettingsRow icon="shield-checkmark-outline" label="Privacy" value="100% offline" />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

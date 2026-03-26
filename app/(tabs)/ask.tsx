@@ -1,64 +1,128 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, spacing, radius } from '../../constants/theme';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite';
+import { ChatBubble } from '../../components/chat/ChatBubble';
+import { ChatInput } from '../../components/chat/ChatInput';
+import { ModelStatusBar } from '../../components/chat/ModelStatusBar';
+import { useChatStore } from '../../lib/store/useChatStore';
+import { getChatMessages, insertChatMessage } from '../../lib/db/chat';
+import { downloadModel, loadModel, generateResponse } from '../../lib/llm/engine';
+import { DEFAULT_MODEL } from '../../lib/llm/models';
+import type { ChatMessage } from '../../lib/llm/types';
+import { colors, fonts, spacing } from '../../constants/theme';
+
+const SYSTEM_GREETING: Omit<ChatMessage, 'id'> = {
+  role: 'assistant',
+  content:
+    "I'm your offline AI assistant. I can answer questions from your downloaded knowledge packs — even without internet. Download the AI model to get started, or try asking a question now.",
+  createdAt: 0,
+};
 
 export default function AskScreen() {
+  const db = useSQLiteContext();
+  const flatListRef = useRef<FlatList<ChatMessage>>(null);
+
+  const messages = useChatStore((s) => s.messages);
+  const modelStatus = useChatStore((s) => s.modelStatus);
+  const isGenerating = useChatStore((s) => s.isGenerating);
+  const downloadProgress = useChatStore((s) => s.downloadProgress);
+  const setMessages = useChatStore((s) => s.setMessages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const setModelStatus = useChatStore((s) => s.setModelStatus);
+  const setIsGenerating = useChatStore((s) => s.setIsGenerating);
+  const setDownloadProgress = useChatStore((s) => s.setDownloadProgress);
+
+  useEffect(() => {
+    getChatMessages(db).then((msgs) => {
+      if (msgs.length === 0) {
+        const greeting = { ...SYSTEM_GREETING, createdAt: Date.now() };
+        insertChatMessage(db, greeting).then((id) => {
+          setMessages([{ ...greeting, id }]);
+        });
+      } else {
+        setMessages(msgs);
+      }
+    });
+  }, [db, setMessages]);
+
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, []);
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      const userMsg: Omit<ChatMessage, 'id'> = {
+        role: 'user',
+        content: text,
+        createdAt: Date.now(),
+      };
+      const userId = await insertChatMessage(db, userMsg);
+      addMessage({ ...userMsg, id: userId });
+      scrollToEnd();
+
+      setIsGenerating(true);
+      const responseText = await generateResponse(messages);
+      const assistantMsg: Omit<ChatMessage, 'id'> = {
+        role: 'assistant',
+        content: responseText,
+        createdAt: Date.now(),
+      };
+      const assistantId = await insertChatMessage(db, assistantMsg);
+      addMessage({ ...assistantMsg, id: assistantId });
+      setIsGenerating(false);
+      scrollToEnd();
+    },
+    [db, messages, addMessage, setIsGenerating, scrollToEnd]
+  );
+
+  const handleDownloadModel = useCallback(async () => {
+    setModelStatus('downloading');
+    setDownloadProgress(0);
+    await downloadModel(DEFAULT_MODEL.id, (p) => setDownloadProgress(p));
+    setModelStatus('loading');
+    await loadModel(DEFAULT_MODEL.id);
+    setModelStatus('ready');
+  }, [setModelStatus, setDownloadProgress]);
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Ask AI</Text>
-        </View>
-
-        {/* Banner */}
-        <View style={styles.banner}>
-          <Ionicons name="sparkles" size={24} color={colors.purple} />
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>AI coming in the next update</Text>
-            <Text style={styles.bannerText}>
-              For now, use Search to find answers in your downloaded packs.
-            </Text>
-          </View>
-        </View>
-
-        {/* Mock chat UI */}
-        <View style={styles.chatArea}>
-          <View style={styles.botBubble}>
-            <Text style={styles.botText}>
-              Hi! I&apos;m your offline AI assistant. Soon I&apos;ll be able to answer questions
-              from all your downloaded knowledge packs — even without internet.
-            </Text>
-          </View>
-
-          <View style={styles.botBubble}>
-            <Text style={styles.botText}>
-              In the meantime, try the Search tab to find articles across your packs.
-            </Text>
-          </View>
-        </View>
-
-        {/* Disabled input bar */}
-        <View style={styles.inputBar}>
-          <View style={styles.inputField}>
-            <Text style={styles.inputPlaceholder}>Ask anything...</Text>
-          </View>
-          <View style={styles.sendButton}>
-            <Ionicons name="arrow-up" size={20} color={colors.ink40} />
-          </View>
-        </View>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Ask AI</Text>
       </View>
-    </SafeAreaView>
+
+      <ModelStatusBar
+        status={modelStatus}
+        modelName={DEFAULT_MODEL.name}
+        modelSize={DEFAULT_MODEL.sizeBytes}
+        downloadProgress={downloadProgress}
+        onDownload={handleDownloadModel}
+      />
+
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <ChatBubble message={item} />}
+        contentContainerStyle={styles.chatContent}
+        style={styles.chatList}
+        onContentSizeChange={scrollToEnd}
+      />
+
+      <ChatInput
+        onSend={handleSend}
+        disabled={false}
+        isGenerating={isGenerating}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.ink,
-  },
   container: {
     flex: 1,
+    backgroundColor: colors.ink,
   },
   header: {
     paddingHorizontal: spacing.md,
@@ -70,77 +134,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: colors.white,
   },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.purple + '15',
-    borderRadius: radius.card,
-    marginHorizontal: spacing.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  bannerContent: {
+  chatList: {
     flex: 1,
-    marginLeft: spacing.md,
   },
-  bannerTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 15,
-    color: colors.white,
-    marginBottom: 4,
-  },
-  bannerText: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.ink20,
-    lineHeight: 20,
-  },
-  chatArea: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  botBubble: {
-    backgroundColor: colors.ink80,
-    borderRadius: radius.card,
-    borderTopLeftRadius: 4,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    maxWidth: '85%',
-  },
-  botText: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.ink10,
-    lineHeight: 22,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.ink60,
-  },
-  inputField: {
-    flex: 1,
-    backgroundColor: colors.ink80,
-    borderRadius: radius.element,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    justifyContent: 'center',
-  },
-  inputPlaceholder: {
-    fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.ink40,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.ink60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.sm,
+  chatContent: {
+    paddingVertical: spacing.md,
   },
 });

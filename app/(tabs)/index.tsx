@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -57,14 +56,28 @@ export default function HomeScreen() {
       router.push('/(tabs)/library');
     } else if (id === 'first-aid') {
       router.push({ pathname: '/(tabs)/search', params: { q: 'first aid' } });
+    } else if (id === 'maps') {
+      router.push('/maps');
     } else {
       router.push('/(tabs)/search');
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        {/* Header with settings */}
+        <View style={styles.headerRow}>
+          <Text style={styles.appTitle}>OfflineBrain</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            style={styles.settingsButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.ink20} />
+          </TouchableOpacity>
+        </View>
+
         {/* Search bar */}
         <TouchableOpacity
           style={styles.searchBar}
@@ -126,7 +139,7 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -140,6 +153,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xl,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  appTitle: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    color: colors.white,
+  },
+  settingsButton: {
+    padding: spacing.xs,
   },
   searchBar: {
     flexDirection: 'row',

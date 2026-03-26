@@ -59,3 +59,28 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   article_id  TEXT PRIMARY KEY REFERENCES articles(id),
   saved_at    INTEGER NOT NULL
 );`;
+
+export const CREATE_CHAT_MESSAGES_TABLE = `
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id          TEXT PRIMARY KEY,
+  role        TEXT NOT NULL,
+  content     TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);`;
+
+export const CREATE_ARTICLE_EMBEDDINGS_TABLE = `
+CREATE TABLE IF NOT EXISTS article_embeddings (
+  article_id     TEXT PRIMARY KEY REFERENCES articles(id),
+  embedding      BLOB NOT NULL,
+  model_version  TEXT NOT NULL
+);`;
+
+export const CREATE_MAP_REGIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS map_regions (
+  id               TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  bounds_json      TEXT NOT NULL,
+  size_bytes       INTEGER NOT NULL,
+  download_status  TEXT NOT NULL DEFAULT 'available',
+  downloaded_at    INTEGER
+);`;

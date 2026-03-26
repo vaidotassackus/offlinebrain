@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -62,18 +61,18 @@ export default function ArticleScreen() {
 
   if (!article) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={styles.safe}>
         <View style={styles.loading}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const tags: string[] = article.tags ? JSON.parse(article.tags) : [];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Back button + breadcrumb */}
         <View style={styles.nav}>
@@ -139,7 +138,7 @@ export default function ArticleScreen() {
           style={styles.askButton}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

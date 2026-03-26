@@ -7,6 +7,9 @@ import {
   CREATE_FTS_TRIGGER_DELETE,
   CREATE_HISTORY_TABLE,
   CREATE_BOOKMARKS_TABLE,
+  CREATE_CHAT_MESSAGES_TABLE,
+  CREATE_ARTICLE_EMBEDDINGS_TABLE,
+  CREATE_MAP_REGIONS_TABLE,
 } from './schema';
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
@@ -18,4 +21,7 @@ export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(CREATE_FTS_TRIGGER_DELETE);
   await db.execAsync(CREATE_HISTORY_TABLE);
   await db.execAsync(CREATE_BOOKMARKS_TABLE);
+  await db.execAsync(CREATE_CHAT_MESSAGES_TABLE);
+  await db.execAsync(CREATE_ARTICLE_EMBEDDINGS_TABLE);
+  await db.execAsync(CREATE_MAP_REGIONS_TABLE);
 }

@@ -6,10 +6,30 @@ import { useFonts, Syne_700Bold, Syne_800ExtraBold } from '@expo-google-fonts/sy
 import { DMSans_300Light, DMSans_400Regular, DMSans_500Medium } from '@expo-google-fonts/dm-sans';
 import { DMMono_400Regular, DMMono_500Medium } from '@expo-google-fonts/dm-mono';
 import { SQLiteProvider } from 'expo-sqlite';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBanner } from '../components/ui/StatusBanner';
 import { runMigrations } from '../lib/db/migrations';
 import { subscribeToNetworkChanges } from '../lib/utils/network';
 import { colors } from '../constants/theme';
+
+function AppContent() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBanner />
+      <View style={styles.content}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.ink },
+            animation: 'slide_from_right',
+          }}
+        />
+      </View>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -36,21 +56,12 @@ export default function RootLayout() {
   }
 
   return (
-    <SQLiteProvider databaseName="offlinebrain.db" onInit={runMigrations}>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <StatusBanner />
-        <View style={styles.content}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.ink },
-              animation: 'slide_from_right',
-            }}
-          />
-        </View>
-      </View>
-    </SQLiteProvider>
+    <SafeAreaProvider>
+      <SQLiteProvider databaseName="offlinebrain.db" onInit={runMigrations}>
+        <StatusBar style="light" />
+        <AppContent />
+      </SQLiteProvider>
+    </SafeAreaProvider>
   );
 }
 
