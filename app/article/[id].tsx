@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -49,6 +50,19 @@ export default function ArticleScreen() {
   const [article, setArticle] = useState<(ArticleRow & { pack_name: string }) | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const { isBookmarked, toggle: toggleBookmark, loadBookmarks } = useBookmarkStore();
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionYPositions = useRef<Record<number, number>>({});
+
+  const handleSectionLayout = useCallback((index: number, e: LayoutChangeEvent) => {
+    sectionYPositions.current[index] = e.nativeEvent.layout.y;
+  }, []);
+
+  const scrollToSection = useCallback((sectionIndex: number) => {
+    const y = sectionYPositions.current[sectionIndex];
+    if (y != null && scrollRef.current) {
+      scrollRef.current.scrollTo({ y, animated: true });
+    }
+  }, []);
 
   useEffect(() => {
     loadBookmarks(db);
@@ -79,7 +93,7 @@ export default function ArticleScreen() {
 
   return (
     <View style={styles.safe}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Back button + breadcrumb */}
         <View style={styles.nav}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -114,19 +128,24 @@ export default function ArticleScreen() {
         {/* Table of contents */}
         {sections.filter((s) => s.title).length > 1 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.toc}>
-            {sections
-              .filter((s) => s.title)
-              .map((s, i) => (
-                <View key={i} style={styles.tocItem}>
+            {sections.map((s, i) =>
+              s.title ? (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.tocItem}
+                  onPress={() => scrollToSection(i)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.tocText}>{s.title}</Text>
-                </View>
-              ))}
+                </TouchableOpacity>
+              ) : null
+            )}
           </ScrollView>
         )}
 
         {/* Content */}
         {sections.map((section, i) => (
-          <View key={i} style={styles.section}>
+          <View key={i} style={styles.section} onLayout={(e) => handleSectionLayout(i, e)}>
             {section.title ? (
               <Text style={styles.sectionTitle}>{section.title}</Text>
             ) : null}
