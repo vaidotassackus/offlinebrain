@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { colors, fonts, spacing, radius } from '../constants/theme';
 import { formatBytes } from '../lib/utils/format';
 
@@ -10,6 +10,17 @@ interface StorageMeterProps {
 
 export function StorageMeter({ usedBytes, totalBytes = 5_000_000_000 }: StorageMeterProps) {
   const fraction = Math.min(usedBytes / totalBytes, 1);
+  const animWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animWidth, {
+      toValue: fraction * 100,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+  }, [fraction, animWidth]);
+
+  const barColor = fraction > 0.9 ? colors.danger : fraction > 0.7 ? colors.warning : colors.brand;
 
   return (
     <View style={styles.container}>
@@ -20,7 +31,18 @@ export function StorageMeter({ usedBytes, totalBytes = 5_000_000_000 }: StorageM
         </Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${fraction * 100}%` }]} />
+        <Animated.View
+          style={[
+            styles.fill,
+            {
+              backgroundColor: barColor,
+              width: animWidth.interpolate({
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%'],
+              }),
+            },
+          ]}
+        />
       </View>
     </View>
   );
@@ -54,7 +76,6 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: '100%',
-    backgroundColor: colors.brand,
     borderRadius: radius.pill,
   },
 });

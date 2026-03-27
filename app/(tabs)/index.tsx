@@ -108,7 +108,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Quick access grid */}
-        <Text style={styles.sectionTitle}>Quick Access</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>Quick Access</Text>
         <View style={styles.grid}>
           {QUICK_ACCESS.map((item) => (
             <TouchableOpacity
@@ -128,7 +128,7 @@ export default function HomeScreen() {
         {/* Saved articles (bookmarks) */}
         {bookmarks.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Saved Articles</Text>
+            <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>Saved Articles</Text>
             {bookmarks.map((article) => (
               <ArticleRow
                 key={article.id}
@@ -145,7 +145,12 @@ export default function HomeScreen() {
         {/* Recently viewed */}
         {recentArticles.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Recently Viewed</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recently Viewed</Text>
+              <TouchableOpacity onPress={() => router.push('/history')} activeOpacity={0.7}>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
             {recentArticles.map((article) => (
               <ArticleRow
                 key={article.id}
@@ -237,10 +242,25 @@ const styles = StyleSheet.create({
     color: colors.ink20,
     marginTop: 2,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     fontFamily: fonts.display,
     fontSize: 18,
     color: colors.white,
+  },
+  seeAll: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.brand,
+  },
+  sectionTitleStandalone: {
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
     marginBottom: spacing.md,

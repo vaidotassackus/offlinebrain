@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, Text, View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from './ui/Badge';
 import { colors, fonts, spacing, radius } from '../constants/theme';
@@ -20,27 +20,47 @@ export function ArticleRow({
   isCritical,
   onPress,
 }: ArticleRowProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>
-            {title}
-          </Text>
-          {isCritical && <Badge label="Critical" variant="critical" style={styles.badge} />}
+    <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+            {isCritical && <Badge label="Critical" variant="critical" style={styles.badge} />}
+          </View>
+          <View style={styles.meta}>
+            <Text style={styles.pack}>{packName}</Text>
+            {readTime != null && (
+              <>
+                <Text style={styles.dot}>·</Text>
+                <Text style={styles.readTime}>{formatReadTime(readTime)}</Text>
+              </>
+            )}
+          </View>
         </View>
-        <View style={styles.meta}>
-          <Text style={styles.pack}>{packName}</Text>
-          {readTime != null && (
-            <>
-              <Text style={styles.dot}>·</Text>
-              <Text style={styles.readTime}>{formatReadTime(readTime)}</Text>
-            </>
-          )}
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.ink40} />
-    </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={16} color={colors.ink40} />
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -60,7 +80,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   title: {
     fontFamily: fonts.bodyMedium,

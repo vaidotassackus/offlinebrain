@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { PackCard } from '../../components/PackCard';
 import { StorageMeter } from '../../components/StorageMeter';
 import { colors, fonts, spacing } from '../../constants/theme';
@@ -10,6 +10,7 @@ import { usePackStore, type Pack } from '../../lib/store/usePackStore';
 import { seedPackArticles } from '../../lib/seed';
 
 export default function LibraryScreen() {
+  const router = useRouter();
   const db = useSQLiteContext();
   const packs = usePackStore((s) => s.packs);
   const setPacks = usePackStore((s) => s.setPacks);
@@ -77,6 +78,7 @@ export default function LibraryScreen() {
           {packs.map((pack) => (
             <PackCard
               key={pack.id}
+              id={pack.id}
               name={pack.name}
               description={pack.description}
               sizeBytes={pack.sizeBytes}
@@ -86,6 +88,11 @@ export default function LibraryScreen() {
               progress={installingId === pack.id ? progress : 0}
               onInstall={() => handleInstall(pack)}
               onDelete={() => handleDelete(pack)}
+              onPress={() => {
+                if (pack.isInstalled) {
+                  router.push(`/pack/${pack.id}`);
+                }
+              }}
             />
           ))}
         </View>

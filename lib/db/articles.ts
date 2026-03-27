@@ -90,3 +90,11 @@ export async function recordArticleView(
     [articleId, Date.now()]
   );
 }
+
+export async function clearHistory(db: SQLiteDatabase): Promise<void> {
+  await db.runAsync(`DELETE FROM history`);
+}
+
+export async function clearBookmarks(db: SQLiteDatabase): Promise<void> {
+  await db.runAsync(`DELETE FROM bookmarks`);
+}

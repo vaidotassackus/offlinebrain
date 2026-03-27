@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { colors, fonts, spacing, radius } from '../constants/theme';
 import { formatBytes } from '../lib/utils/format';
 
 interface PackCardProps {
+  id: string;
   name: string;
   description: string;
   sizeBytes: number;
@@ -15,9 +17,11 @@ interface PackCardProps {
   progress: number;
   onInstall: () => void;
   onDelete: () => void;
+  onPress: () => void;
 }
 
 export function PackCard({
+  id,
   name,
   description,
   sizeBytes,
@@ -27,43 +31,79 @@ export function PackCard({
   progress,
   onInstall,
   onDelete,
+  onPress,
 }: PackCardProps) {
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, progressAnim]);
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.name}>{name}</Text>
           {isRequired && <Badge label="Required" variant="required" style={styles.badge} />}
+          {isInstalled && !isRequired && (
+            <Ionicons name="checkmark-circle" size={16} color={colors.brand} style={styles.installedIcon} />
+          )}
         </View>
         <Text style={styles.size}>{formatBytes(sizeBytes)}</Text>
       </View>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={styles.description} numberOfLines={2}>{description}</Text>
 
       {installing && (
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          <Animated.View
+            style={[
+              styles.progressFill,
+              {
+                width: progressAnim.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
+            ]}
+          />
         </View>
       )}
 
-      <View style={styles.actions}>
-        {isInstalled ? (
-          <Button
-            title="Delete"
-            variant="ghost"
-            onPress={onDelete}
-            disabled={isRequired}
-          />
-        ) : (
-          <Button
-            title={installing ? 'Installing...' : 'Install'}
-            variant="primary"
-            onPress={onInstall}
-            disabled={installing}
-            loading={installing}
-          />
-        )}
+      <View style={styles.footer}>
+        <View style={styles.metaRow}>
+          <Ionicons name="document-text-outline" size={14} color={colors.ink40} />
+          <Text style={styles.metaText}>
+            {isInstalled ? 'Installed' : 'Not installed'}
+          </Text>
+        </View>
+        <View style={styles.actions}>
+          {isInstalled ? (
+            <Button
+              title="Delete"
+              variant="ghost"
+              onPress={(e) => { e?.stopPropagation?.(); onDelete(); }}
+              disabled={isRequired}
+            />
+          ) : (
+            <Button
+              title={installing ? 'Installing...' : 'Install'}
+              variant="primary"
+              onPress={(e) => { e?.stopPropagation?.(); onInstall(); }}
+              disabled={installing}
+              loading={installing}
+            />
+          )}
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -117,6 +157,24 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.brand,
     borderRadius: radius.pill,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  metaText: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: colors.ink40,
+  },
+  installedIcon: {
+    marginLeft: spacing.xs,
   },
   actions: {
     flexDirection: 'row',

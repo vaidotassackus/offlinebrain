@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { StorageMeter } from '../components/StorageMeter';
 import { colors, fonts, spacing, radius } from '../constants/theme';
 import { useSettingsStore } from '../lib/store/useSettingsStore';
+import { clearHistory, clearBookmarks } from '../lib/db/articles';
+import { getInstalledSize } from '../lib/db/packs';
 
 function SettingsRow({
   icon,
@@ -52,6 +57,16 @@ export default function SettingsScreen() {
   const router = useRouter();
   const db = useSQLiteContext();
   const setHasSeeded = useSettingsStore((s) => s.setHasSeeded);
+  const [usedBytes, setUsedBytes] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      getInstalledSize(db).then(setUsedBytes);
+    }, [db])
+  );
+
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const sdkVersion = Constants.expoConfig?.sdkVersion ?? 'Unknown';
 
   const handleClearHistory = () => {
     Alert.alert('Clear History', 'This will remove all your reading history.', [
@@ -60,8 +75,22 @@ export default function SettingsScreen() {
         text: 'Clear',
         style: 'destructive',
         onPress: async () => {
-          await db.runAsync('DELETE FROM history');
+          await clearHistory(db);
           Alert.alert('Done', 'Reading history cleared.');
+        },
+      },
+    ]);
+  };
+
+  const handleClearBookmarks = () => {
+    Alert.alert('Clear Bookmarks', 'This will remove all your saved articles.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          await clearBookmarks(db);
+          Alert.alert('Done', 'All bookmarks cleared.');
         },
       },
     ]);
@@ -100,25 +129,37 @@ export default function SettingsScreen() {
           <Text style={styles.title}>Settings</Text>
         </View>
 
+        {/* Storage */}
+        <Text style={styles.sectionLabel}>Storage</Text>
+        <View style={styles.section}>
+          <StorageMeter usedBytes={usedBytes} />
+        </View>
+
         {/* General */}
         <Text style={styles.sectionLabel}>General</Text>
         <View style={styles.section}>
           <SettingsRow icon="library-outline" label="Manage Packs" onPress={() => router.push('/(tabs)/library')} />
-          <SettingsRow icon="time-outline" label="Clear Reading History" onPress={handleClearHistory} />
+          <SettingsRow icon="time-outline" label="Reading History" onPress={() => router.push('/history')} />
+          <SettingsRow icon="bookmark-outline" label="Saved Articles" onPress={() => router.push('/(tabs)/search')} />
         </View>
 
         {/* Data */}
         <Text style={styles.sectionLabel}>Data</Text>
         <View style={styles.section}>
+          <SettingsRow icon="time-outline" label="Clear Reading History" onPress={handleClearHistory} />
+          <SettingsRow icon="bookmark-outline" label="Clear Bookmarks" onPress={handleClearBookmarks} />
           <SettingsRow icon="trash-outline" label="Reset All Data" onPress={handleResetData} danger />
         </View>
 
         {/* About */}
         <Text style={styles.sectionLabel}>About</Text>
         <View style={styles.section}>
-          <SettingsRow icon="information-circle-outline" label="Version" value="1.0.0" />
+          <SettingsRow icon="information-circle-outline" label="Version" value={appVersion} />
+          <SettingsRow icon="code-slash-outline" label="Expo SDK" value={sdkVersion} />
           <SettingsRow icon="shield-checkmark-outline" label="Privacy" value="100% offline" />
         </View>
+
+        <Text style={styles.footer}>OfflineBrain · Everything you need to know,{'\n'}even when the world goes dark.</Text>
       </ScrollView>
     </View>
   );
@@ -186,5 +227,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink40,
     marginRight: spacing.sm,
+  },
+  footer: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.ink40,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    marginBottom: spacing['2xl'],
+    lineHeight: 20,
   },
 });
