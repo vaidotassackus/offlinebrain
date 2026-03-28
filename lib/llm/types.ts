@@ -1,5 +1,7 @@
 export type ModelStatus = 'not_downloaded' | 'downloading' | 'loading' | 'ready' | 'error';
 
+export type StreamCallback = (token: string) => void;
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -15,10 +17,13 @@ export interface ModelConfig {
   quantization: string;
   downloadUrl: string;
   contextLength: number;
+  stopTokens: string[];
 }
 
 export interface GenerateOptions {
   maxTokens?: number;
   temperature?: number;
   stopSequences?: string[];
+  onToken?: StreamCallback;
+  ragContext?: string;
 }

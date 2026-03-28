@@ -14,15 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vaidotassackus.offlinebrain"
+      "bundleIdentifier": "com.vaidotassackus.offlinebrain",
+      "newArchEnabled": true
     },
     "android": {
+      "newArchEnabled": true,
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.vaidotassackus.offlinebrain"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -31,7 +34,8 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      "expo-dev-client"
     ]
   }
 }

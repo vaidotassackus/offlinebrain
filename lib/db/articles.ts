@@ -45,6 +45,32 @@ export async function searchArticles(
   return results;
 }
 
+export interface RAGArticleResult {
+  id: string;
+  title: string;
+  content: string;
+  pack_name: string;
+}
+
+export async function searchArticlesForRAG(
+  db: SQLiteDatabase,
+  query: string,
+  limit = 3
+): Promise<RAGArticleResult[]> {
+  if (!query.trim()) return [];
+  const ftsQuery = query.trim().split(/\s+/).map((w) => `${w}*`).join(' ');
+  return db.getAllAsync<RAGArticleResult>(
+    `SELECT a.id, a.title, a.content, p.name as pack_name
+     FROM articles_fts
+     JOIN articles a ON a.rowid = articles_fts.rowid
+     JOIN packs p ON p.id = a.pack_id
+     WHERE articles_fts MATCH ?
+     ORDER BY rank
+     LIMIT ?`,
+    [ftsQuery, limit]
+  );
+}
+
 export async function getArticleById(
   db: SQLiteDatabase,
   id: string

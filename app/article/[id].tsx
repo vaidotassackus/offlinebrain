@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   type LayoutChangeEvent,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -165,10 +164,12 @@ export default function ArticleScreen() {
         {/* Ask AI button */}
         <Button
           title="Ask AI about this"
-          variant="ghost"
-          disabled
+          variant="secondary"
           onPress={() =>
-            Alert.alert('Coming Soon', 'AI features will be available in the next update.')
+            router.push({
+              pathname: '/(tabs)/ask',
+              params: { articleId: article.id, articleTitle: article.title },
+            })
           }
           style={styles.askButton}
         />
