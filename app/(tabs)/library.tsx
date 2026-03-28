@@ -8,6 +8,8 @@ import { colors, fonts, spacing } from '../../constants/theme';
 import { getAllPacks, installPack, deletePack, mockInstallPack, getInstalledSize } from '../../lib/db/packs';
 import { usePackStore, type Pack } from '../../lib/store/usePackStore';
 import { seedPackArticles } from '../../lib/seed';
+import { isEmbeddingModelLoaded } from '../../lib/embeddings/engine';
+import { indexPackArticles, deletePackEmbeddings } from '../../lib/embeddings/indexer';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -38,6 +40,14 @@ export default function LibraryScreen() {
     await mockInstallPack(pack.id, (p) => setProgress(p));
     await installPack(db, pack.id);
     await seedPackArticles(db, pack.id);
+    // Index articles for vector search if embedding model is ready
+    if (isEmbeddingModelLoaded()) {
+      try {
+        await indexPackArticles(db, pack.id);
+      } catch (error) {
+        console.warn('Article indexing failed (non-critical):', error);
+      }
+    }
     updatePack(pack.id, { isInstalled: true, installedAt: Date.now() });
     setInstallingId(null);
     const size = await getInstalledSize(db);
@@ -55,6 +65,7 @@ export default function LibraryScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            await deletePackEmbeddings(db, pack.id);
             await deletePack(db, pack.id);
             updatePack(pack.id, { isInstalled: false, installedAt: null });
             const size = await getInstalledSize(db);

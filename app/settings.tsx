@@ -17,6 +17,11 @@ import { colors, fonts, spacing, radius } from '../constants/theme';
 import { useSettingsStore } from '../lib/store/useSettingsStore';
 import { clearHistory, clearBookmarks } from '../lib/db/articles';
 import { getInstalledSize } from '../lib/db/packs';
+import { isEmbeddingModelDownloaded, isEmbeddingModelLoaded } from '../lib/embeddings/engine';
+import { reindexAllArticles } from '../lib/embeddings/indexer';
+import { getEmbeddingCount, getTotalArticleCount } from '../lib/db/vectors';
+import { formatBytes } from '../lib/utils/format';
+import { DEFAULT_EMBEDDING_MODEL } from '../lib/embeddings/models';
 
 function SettingsRow({
   icon,
@@ -58,10 +63,15 @@ export default function SettingsScreen() {
   const db = useSQLiteContext();
   const setHasSeeded = useSettingsStore((s) => s.setHasSeeded);
   const [usedBytes, setUsedBytes] = useState(0);
+  const [embeddingCount, setEmbeddingCount] = useState(0);
+  const [totalArticles, setTotalArticles] = useState(0);
+  const [isReindexing, setIsReindexing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getInstalledSize(db).then(setUsedBytes);
+      getEmbeddingCount(db).then(setEmbeddingCount);
+      getTotalArticleCount(db).then(setTotalArticles);
     }, [db])
   );
 
@@ -94,6 +104,28 @@ export default function SettingsScreen() {
         },
       },
     ]);
+  };
+
+  const handleReindex = async () => {
+    if (!isEmbeddingModelLoaded()) {
+      Alert.alert('Model Not Loaded', 'The embedding model needs to be loaded first. Open the Ask AI tab to auto-download it.');
+      return;
+    }
+    setIsReindexing(true);
+    try {
+      const count = await reindexAllArticles(db, (current, total) => {
+        setEmbeddingCount(current);
+        setTotalArticles(total);
+      });
+      Alert.alert('Done', `Re-indexed ${count} articles.`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to re-index articles.');
+      console.error('Reindex error:', error);
+    } finally {
+      setIsReindexing(false);
+      getEmbeddingCount(db).then(setEmbeddingCount);
+      getTotalArticleCount(db).then(setTotalArticles);
+    }
   };
 
   const handleResetData = () => {
@@ -133,6 +165,26 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Storage</Text>
         <View style={styles.section}>
           <StorageMeter usedBytes={usedBytes} />
+        </View>
+
+        {/* AI Search */}
+        <Text style={styles.sectionLabel}>AI Search</Text>
+        <View style={styles.section}>
+          <SettingsRow
+            icon="hardware-chip-outline"
+            label="Embedding Model"
+            value={isEmbeddingModelDownloaded() ? `Downloaded (${formatBytes(DEFAULT_EMBEDDING_MODEL.sizeBytes)})` : 'Not Downloaded'}
+          />
+          <SettingsRow
+            icon="analytics-outline"
+            label="Indexed Articles"
+            value={`${embeddingCount} / ${totalArticles}`}
+          />
+          <SettingsRow
+            icon="refresh-outline"
+            label={isReindexing ? 'Re-indexing...' : 'Re-index Articles'}
+            onPress={isReindexing ? undefined : handleReindex}
+          />
         </View>
 
         {/* General */}

@@ -1,5 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { getArticleById, searchArticlesForRAG } from '../db/articles';
+import { searchByVector, hasEmbeddings } from '../db/vectors';
+import { embedText, isEmbeddingModelLoaded } from '../embeddings/engine';
 
 export interface RAGResult {
   articleId: string;
@@ -9,14 +11,42 @@ export interface RAGResult {
 }
 
 /**
- * Search articles for RAG context using FTS5.
- * Returns the top 3 most relevant articles with content excerpts.
+ * Search articles for RAG context.
+ * Prefers vector search when embeddings are available, falls back to FTS5.
  */
 export async function searchRAGContext(
   db: SQLiteDatabase,
   query: string,
   limit = 3
 ): Promise<RAGResult[]> {
+  // Try vector search first
+  if (isEmbeddingModelLoaded() && (await hasEmbeddings(db))) {
+    try {
+      const queryEmbedding = await embedText(query);
+      const vectorResults = await searchByVector(db, queryEmbedding, limit);
+
+      if (vectorResults.length > 0) {
+        // Fetch full content for each result
+        const results: RAGResult[] = [];
+        for (const vr of vectorResults) {
+          const article = await getArticleById(db, vr.articleId);
+          if (article) {
+            results.push({
+              articleId: vr.articleId,
+              title: vr.title,
+              packName: vr.packName,
+              contentExcerpt: article.content.slice(0, 1500),
+            });
+          }
+        }
+        return results;
+      }
+    } catch (error) {
+      console.warn('Vector search failed, falling back to FTS5:', error);
+    }
+  }
+
+  // Fallback to FTS5 keyword search
   const results = await searchArticlesForRAG(db, query, limit);
   return results.map((r) => ({
     articleId: r.id,

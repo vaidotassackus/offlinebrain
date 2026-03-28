@@ -20,6 +20,13 @@ import {
   generateResponse,
   isModelDownloaded,
 } from '../../lib/llm/engine';
+import {
+  isEmbeddingModelDownloaded,
+  downloadEmbeddingModel,
+  loadEmbeddingModel,
+  isEmbeddingModelLoaded,
+} from '../../lib/embeddings/engine';
+import { indexUnindexedArticles } from '../../lib/embeddings/indexer';
 import { DEFAULT_MODEL } from '../../lib/llm/models';
 import { buildSystemMessage } from '../../lib/llm/prompts';
 import {
@@ -77,6 +84,30 @@ export default function AskScreen() {
         .catch(() => setModelStatus('error'));
     }
   }, []);
+
+  // Auto-download embedding model and index articles after LLM is ready
+  useEffect(() => {
+    if (modelStatus !== 'ready') return;
+
+    const setupEmbeddings = async () => {
+      try {
+        // Download embedding model if needed (25MB — quick)
+        if (!isEmbeddingModelDownloaded()) {
+          await downloadEmbeddingModel(() => {});
+        }
+        // Load embedding model if not already loaded
+        if (!isEmbeddingModelLoaded()) {
+          await loadEmbeddingModel();
+        }
+        // Index any unindexed articles in background
+        await indexUnindexedArticles(db);
+      } catch (error) {
+        console.warn('Embedding setup failed (non-critical):', error);
+      }
+    };
+
+    setupEmbeddings();
+  }, [modelStatus, db]);
 
   // Load chat messages on mount
   useEffect(() => {

@@ -14,39 +14,57 @@ export async function insertEmbedding(
   );
 }
 
+export async function deleteEmbeddingsByPack(
+  db: SQLiteDatabase,
+  packId: string
+): Promise<void> {
+  await db.runAsync(
+    `DELETE FROM article_embeddings WHERE article_id IN (SELECT id FROM articles WHERE pack_id = ?)`,
+    [packId]
+  );
+}
+
+interface EmbeddingRow {
+  article_id: string;
+  embedding: ArrayBuffer;
+  title: string;
+  pack_name: string;
+  content: string;
+}
+
 export async function searchByVector(
-  _db: SQLiteDatabase,
-  _queryEmbedding: Float32Array,
-  _limit = 10
+  db: SQLiteDatabase,
+  queryEmbedding: Float32Array,
+  limit = 3
 ): Promise<VectorSearchResult[]> {
-  // TODO: Replace with sqlite-vec HNSW search
-  // In the real implementation, this will use:
-  // SELECT ... FROM article_embeddings
-  // WHERE embedding MATCH vec_query(?)
-  // ORDER BY distance LIMIT ?
-  return [
-    {
-      articleId: 'med-cpr',
-      title: 'CPR — Adult and Child',
-      packName: 'Emergency Medical',
-      similarity: 0.92,
-      snippet: 'Recognizing cardiac arrest and performing chest compressions...',
-    },
-    {
-      articleId: 'med-tourniquet',
-      title: 'Tourniquet Application for Severe Bleeding',
-      packName: 'Emergency Medical',
-      similarity: 0.87,
-      snippet: 'A tourniquet is indicated for life-threatening bleeding...',
-    },
-    {
-      articleId: 'surv-water',
-      title: 'Water Purification Methods',
-      packName: 'Wilderness Survival',
-      similarity: 0.73,
-      snippet: 'Boiling is the most reliable field method for killing all pathogens...',
-    },
-  ];
+  // Load all embeddings with article metadata
+  const rows = await db.getAllAsync<EmbeddingRow>(
+    `SELECT ae.article_id, ae.embedding, a.title, p.name as pack_name, a.content
+     FROM article_embeddings ae
+     JOIN articles a ON a.id = ae.article_id
+     JOIN packs p ON p.id = a.pack_id`
+  );
+
+  if (rows.length === 0) return [];
+
+  // Compute cosine similarity for each article
+  const scored = rows
+    .map((row) => {
+      const storedEmbedding = new Float32Array(row.embedding);
+      const similarity = cosineSimilarity(queryEmbedding, storedEmbedding);
+      return {
+        articleId: row.article_id,
+        title: row.title,
+        packName: row.pack_name,
+        similarity,
+        snippet: row.content.slice(0, 200),
+      };
+    })
+    .filter((r) => r.similarity > 0.3) // minimum relevance threshold
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, limit);
+
+  return scored;
 }
 
 export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
@@ -68,4 +86,18 @@ export async function hasEmbeddings(db: SQLiteDatabase): Promise<boolean> {
     `SELECT COUNT(*) as count FROM article_embeddings`
   );
   return (result?.count ?? 0) > 0;
+}
+
+export async function getEmbeddingCount(db: SQLiteDatabase): Promise<number> {
+  const result = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM article_embeddings`
+  );
+  return result?.count ?? 0;
+}
+
+export async function getTotalArticleCount(db: SQLiteDatabase): Promise<number> {
+  const result = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM articles`
+  );
+  return result?.count ?? 0;
 }
